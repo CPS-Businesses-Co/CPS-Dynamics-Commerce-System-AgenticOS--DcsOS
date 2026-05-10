@@ -38,7 +38,7 @@ extra_css:
 extra:
   alternate:
     - name: العربية
-      link: /CPS-Enterprise-Dynamics-Commerce-System-DCS-AgenticOS/
+      link: /CPS-Enterprise-Dynamics-Commerce-System-DCS-AgenticOS/ar/
       lang: ar
     - name: English
       link: /CPS-Enterprise-Dynamics-Commerce-System-DCS-AgenticOS/en/
@@ -47,7 +47,7 @@ extra:
     - icon: fontawesome/brands/github
       link: https://github.com/Ahmedhajjajofficial/CPS-Enterprise-Dynamics-Commerce-System-DCS-AgenticOS
 
-copyright: "© 2026 CP'S Enterprise DCS. All rights reserved. | جميع الحقوق محفوظة."
+copyright: "© 2026 CP'S Businesses for Enterprises Tech Solution. All rights reserved. | جميع الحقوق محفوظة."
 
 plugins:
   - search
