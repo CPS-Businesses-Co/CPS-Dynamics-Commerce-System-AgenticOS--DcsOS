@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="assets/brand/logo-light.png" alt="CPS Logo" width="200"/>
+</p>
+
 # CP'S Enterprise Dynamics Commerce System (DCS)
 
 <p align="center">
