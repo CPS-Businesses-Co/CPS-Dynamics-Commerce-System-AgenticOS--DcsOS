@@ -2,8 +2,8 @@
   "$schema": "https://mintlify.com/schema.json",
   "name": "CPS Enterprise Dynamics Commerce System",
   "logo": {
-    "dark": "/logo/dark.svg",
-    "light": "/logo/light.svg",
+    "dark": "/logo/dark.png",
+    "light": "/logo/light.png",
     "href": "https://cps-enterprise.com"
   },
   "favicon": "/favicon.png",
