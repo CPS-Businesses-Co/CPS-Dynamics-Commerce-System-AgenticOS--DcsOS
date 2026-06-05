@@ -1,5 +1,5 @@
 site_name: CP'S Enterprise DCS
-site_url: https://ahmedhajjajofficial.github.io/CPS-Enterprise-Dynamics-Commerce-System-DCS-AgenticOS/
+site_url: https://ahmedhajjajofficial.github.io/CPS-Dynamics-Commerce-System-AgenticOS/
 
 theme:
   name: material
@@ -38,14 +38,14 @@ extra_css:
 extra:
   alternate:
     - name: العربية
-      link: /CPS-Enterprise-Dynamics-Commerce-System-DCS-AgenticOS/ar/
+      link: /CPS-Dynamics-Commerce-System-AgenticOS/ar/
       lang: ar
     - name: English
-      link: /CPS-Enterprise-Dynamics-Commerce-System-DCS-AgenticOS/en/
+      link: /CPS-Dynamics-Commerce-System-AgenticOS/en/
       lang: en
   social:
     - icon: fontawesome/brands/github
-      link: https://github.com/Ahmedhajjajofficial/CPS-Enterprise-Dynamics-Commerce-System-DCS-AgenticOS
+      link: https://github.com/Ahmedhajjajofficial/CPS-Dynamics-Commerce-System-AgenticOS
 
 copyright: "© 2026 CP'S Businesses for Enterprises Tech Solution. All rights reserved. | جميع الحقوق محفوظة."
 

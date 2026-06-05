@@ -37,9 +37,9 @@ CP'S Enterprise DCS is a distributed commerce platform built on **event sourcing
 ## Architecture
 
 ```
-┌─────────────────────────────────────────────────────────────────────────────┐
+┌────────────────────────────────────────────────────────────────────────────────┐
 │                       CP'S Enterprise DCS v4.0                              │
-├─────────────────────────────────────────────────────────────────────────────┤
+├────────────────────────────────────────────────────────────────────────────────┤
 │                                                                             │
 │  ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐         │
 │  │   RockDeals POS │    │   RockDeals POS │    │   RockDeals POS │         │
@@ -55,12 +55,12 @@ CP'S Enterprise DCS is a distributed commerce platform built on **event sourcing
 │  └────────┬────────┘    └────────┬────────┘    └────────┬────────┘         │
 │           └──────────────────────┼──────────────────────┘                   │
 │                                  ▼                                          │
-│  ┌──────────────────────────────────────────────────────────────────┐       │
+│  ┌──────────────────────────────────────────────────────────────────────┐   │
 │  │                   Regional Agent (Go)                            │       │
 │  │  • Raft Consensus   • CRDT Aggregation   • PostgreSQL Store     │       │
-│  └──────────────────────────────────────────────────────────────────┘       │
+│  └──────────────────────────────────────────────────────────────────────┘   │
 │                                                                             │
-└─────────────────────────────────────────────────────────────────────────────┘
+└────────────────────────────────────────────────────────────────────────────────┘
 ```
 
 ### Repository Structure
@@ -154,8 +154,8 @@ CP'S Enterprise DCS is a distributed commerce platform built on **event sourcing
 ### 1. Clone and Install
 
 ```bash
-git clone https://github.com/Ahmedhajjajofficial/CPS-Enterprise-Dynamics-Commerce-System-DCS.git
-cd CPS-Enterprise-Dynamics-Commerce-System-DCS
+git clone https://github.com/Ahmedhajjajofficial/CPS-Dynamics-Commerce-System-AgenticOS.git
+cd CPS-Dynamics-Commerce-System-AgenticOS
 
 # Install everything at once
 make install
