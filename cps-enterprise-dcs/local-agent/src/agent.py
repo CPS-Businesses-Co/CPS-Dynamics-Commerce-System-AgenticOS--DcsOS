@@ -457,13 +457,31 @@ class LocalAgent:
     
     async def _sync_loop(self):
         """Background task for synchronizing with regional agent."""
+        consecutive_failures = 0
         while self._running:
             try:
                 await self._sync_with_regional()
                 self.sync_status.is_connected = True
+                self.sync_status.failed_events = 0
+                consecutive_failures = 0
+                if self.state == AgentState.DEGRADED:
+                    self.state = AgentState.ACTIVE
+                    logger.info("Sync recovered, state restored to ACTIVE")
             except Exception as e:
-                logger.error(f"Sync failed: {e}")
+                consecutive_failures += 1
                 self.sync_status.is_connected = False
+                self.sync_status.failed_events += 1
+                logger.error(
+                    "Sync failed (attempt %d): %s",
+                    consecutive_failures, e,
+                    exc_info=True,
+                )
+                if consecutive_failures >= 3 and self.state == AgentState.ACTIVE:
+                    self.state = AgentState.DEGRADED
+                    logger.warning(
+                        "Entering DEGRADED state after %d consecutive sync failures",
+                        consecutive_failures,
+                    )
             
             await asyncio.sleep(self.config.sync_interval_seconds)
     
@@ -490,13 +508,18 @@ class LocalAgent:
     
     def _on_event(self, event: StoredEvent):
         """Handle events for projections."""
-        # Notify registered handlers
         handlers = self._event_handlers.get(event.event_type, [])
         for handler in handlers:
             try:
                 handler(event)
             except Exception as e:
-                logger.error(f"Event handler failed: {e}")
+                logger.error(
+                    "Event handler %s failed for event %s: %s",
+                    handler.__name__ if hasattr(handler, '__name__') else repr(handler),
+                    event.event_id,
+                    e,
+                    exc_info=True,
+                )
     
     def on_event(
         self,
@@ -539,16 +562,18 @@ class LocalAgent:
         result: Dict[str, Any]
     ):
         """Record completion of a saga step."""
-        if saga_id in self._active_sagas:
-            self._active_sagas[saga_id]["steps"].append({
-                "step_name": step_name,
-                "result": result,
-                "completed_at": datetime.utcnow().isoformat()
-            })
+        if saga_id not in self._active_sagas:
+            raise ValueError(f"Unknown saga: {saga_id}")
+        self._active_sagas[saga_id]["steps"].append({
+            "step_name": step_name,
+            "result": result,
+            "completed_at": datetime.utcnow().isoformat()
+        })
     
     async def complete_saga(self, saga_id: str):
         """Mark a saga as completed."""
-        if saga_id in self._active_sagas:
-            self._active_sagas[saga_id]["state"] = "COMPLETED"
-            self._active_sagas[saga_id]["completed_at"] = datetime.utcnow().isoformat()
-            logger.info(f"Saga completed: {saga_id}")
+        if saga_id not in self._active_sagas:
+            raise ValueError(f"Unknown saga: {saga_id}")
+        self._active_sagas[saga_id]["state"] = "COMPLETED"
+        self._active_sagas[saga_id]["completed_at"] = datetime.utcnow().isoformat()
+        logger.info(f"Saga completed: {saga_id}")

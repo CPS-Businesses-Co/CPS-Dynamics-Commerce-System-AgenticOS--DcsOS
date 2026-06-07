@@ -337,16 +337,24 @@ class CryptoManager:
         )
     
     def verify(self, data: bytes, signature: bytes, public_key_pem: bytes) -> bool:
-        """Verify ECDSA signature."""
+        """Verify ECDSA signature.
+
+        Returns False only when the signature is cryptographically
+        invalid.  All other errors (bad key format, wrong algorithm,
+        etc.) are re-raised so callers can distinguish "invalid
+        signature" from "something is broken".
+        """
+        from cryptography.exceptions import InvalidSignature
+
+        public_key = serialization.load_pem_public_key(
+            public_key_pem,
+            backend=default_backend()
+        )
+
         try:
-            public_key = serialization.load_pem_public_key(
-                public_key_pem,
-                backend=default_backend()
-            )
-            
             public_key.verify(signature, data, ec.ECDSA(hashes.SHA256()))
             return True
-        except Exception:
+        except InvalidSignature:
             return False
 
 
