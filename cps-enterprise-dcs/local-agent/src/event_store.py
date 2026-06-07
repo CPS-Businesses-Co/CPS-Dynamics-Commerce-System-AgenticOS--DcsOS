@@ -33,9 +33,12 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Dict, List, Optional, Any, Callable
 from contextlib import contextmanager
+import logging
 import threading
 import asyncio
 from pathlib import Path
+
+logger = logging.getLogger("EventStore")
 
 
 @dataclass
@@ -622,7 +625,16 @@ class EventStoreSubscription:
             for event in events:
                 if not self.event_types or event.event_type in self.event_types:
                     for handler in self._handlers:
-                        handler(event)
+                        try:
+                            handler(event)
+                        except Exception as e:
+                            logger.error(
+                                "Subscription handler %s failed for event %s: %s",
+                                handler.__name__ if hasattr(handler, '__name__') else repr(handler),
+                                event.event_id,
+                                e,
+                                exc_info=True,
+                            )
                 
                 self._last_position += 1
             
