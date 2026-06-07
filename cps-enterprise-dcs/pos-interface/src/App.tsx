@@ -97,7 +97,6 @@ function App() {
               type="password"
               placeholder="Password"
               className="w-full p-3 border rounded-lg"
-              defaultValue="password"
             />
             <button
               onClick={() => {

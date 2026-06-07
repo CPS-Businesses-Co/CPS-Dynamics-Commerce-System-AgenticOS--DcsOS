@@ -112,26 +112,31 @@ class CryptoManager:
         
         self._keks: Dict[str, bytes] = {}  # Key Encryption Keys
         self._key_versions: Dict[str, int] = {}
+        self._kek_salts: Dict[str, bytes] = {}
         self._initialize_keks()
     
     def _initialize_keks(self):
         """Initialize default KEKs."""
-        # Create default KEK
-        default_kek = self._derive_kek("default", self._master_key)
+        # Create default KEK with random salt
+        default_salt = os.urandom(16)
+        default_kek = self._derive_kek("default", self._master_key, default_salt)
         self._keks["default"] = default_kek
+        self._kek_salts["default"] = default_salt
         self._key_versions["default"] = 1
         
         # Create compliance KEK for sensitive data
-        compliance_kek = self._derive_kek("compliance", self._master_key)
+        compliance_salt = os.urandom(16)
+        compliance_kek = self._derive_kek("compliance", self._master_key, compliance_salt)
         self._keks["compliance"] = compliance_kek
+        self._kek_salts["compliance"] = compliance_salt
         self._key_versions["compliance"] = 1
     
-    def _derive_kek(self, key_id: str, master_key: bytes) -> bytes:
-        """Derive a KEK from the master key."""
+    def _derive_kek(self, key_id: str, master_key: bytes, salt: bytes) -> bytes:
+        """Derive a KEK from the master key using a random salt."""
         kdf = PBKDF2HMAC(
             algorithm=hashes.SHA512(),
             length=32,
-            salt=key_id.encode(),
+            salt=salt,
             iterations=100000,
             backend=default_backend()
         )
