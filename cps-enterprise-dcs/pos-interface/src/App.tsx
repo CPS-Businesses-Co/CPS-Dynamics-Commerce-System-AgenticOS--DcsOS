@@ -10,6 +10,7 @@ import { ProductGrid } from './components/ProductGrid';
 import { Cart } from './components/Cart';
 import { useSessionStore } from './store/sessionStore';
 import { Product, User as UserType } from './types';
+import { formatCurrency } from './utils/currency';
 
 // Mock data - replace with API calls
 const mockProducts: Product[] = [
@@ -166,7 +167,7 @@ function App() {
                 Register: {currentSession.registerId}
               </span>
               <span className="text-gray-500">
-                Sales: ${currentSession.totalSales.toFixed(2)}
+                Sales: {formatCurrency(currentSession.totalSales)}
               </span>
             </div>
           )}

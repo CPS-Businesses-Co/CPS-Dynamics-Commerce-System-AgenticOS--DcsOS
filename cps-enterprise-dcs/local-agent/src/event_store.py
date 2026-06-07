@@ -179,6 +179,28 @@ class SQLiteEventStore(EventStore):
             self._local.connection.row_factory = sqlite3.Row
         return self._local.connection
     
+    @contextmanager
+    def _cursor(self, *, commit: bool = False):
+        """Acquire the lock, yield a cursor, and optionally commit."""
+        with self._lock:
+            conn = self._get_connection()
+            cursor = conn.cursor()
+            yield cursor
+            if commit:
+                conn.commit()
+    
+    def _fetch_events(self, query: str, params: tuple = ()) -> List[StoredEvent]:
+        """Execute a SELECT and return a list of StoredEvents."""
+        with self._cursor() as cursor:
+            cursor.execute(query, params)
+            return [self._row_to_event(row) for row in cursor.fetchall()]
+    
+    def _fetch_one(self, query: str, params: tuple = ()) -> Optional[sqlite3.Row]:
+        """Execute a SELECT and return a single row or None."""
+        with self._cursor() as cursor:
+            cursor.execute(query, params)
+            return cursor.fetchone()
+    
     def _initialize_db(self):
         """Initialize the database schema."""
         with self._lock:
@@ -327,47 +349,22 @@ class SQLiteEventStore(EventStore):
         to_version: Optional[int] = None
     ) -> List[StoredEvent]:
         """Read events from a stream."""
-        with self._lock:
-            conn = self._get_connection()
-            cursor = conn.cursor()
-            
-            if to_version is not None:
-                cursor.execute(
-                    """
-                    SELECT * FROM event_store 
-                    WHERE stream_id = ? AND version >= ? AND version <= ?
-                    ORDER BY version ASC
-                    """,
-                    (stream_id, from_version, to_version)
-                )
-            else:
-                cursor.execute(
-                    """
-                    SELECT * FROM event_store 
-                    WHERE stream_id = ? AND version >= ?
-                    ORDER BY version ASC
-                    """,
-                    (stream_id, from_version)
-                )
-            
-            rows = cursor.fetchall()
-            return [self._row_to_event(row) for row in rows]
+        if to_version is not None:
+            return self._fetch_events(
+                "SELECT * FROM event_store WHERE stream_id = ? AND version >= ? AND version <= ? ORDER BY version ASC",
+                (stream_id, from_version, to_version)
+            )
+        return self._fetch_events(
+            "SELECT * FROM event_store WHERE stream_id = ? AND version >= ? ORDER BY version ASC",
+            (stream_id, from_version)
+        )
     
     async def get_event(self, event_id: str) -> Optional[StoredEvent]:
         """Get a single event by ID."""
-        with self._lock:
-            conn = self._get_connection()
-            cursor = conn.cursor()
-            
-            cursor.execute(
-                "SELECT * FROM event_store WHERE event_id = ?",
-                (event_id,)
-            )
-            row = cursor.fetchone()
-            
-            if row:
-                return self._row_to_event(row)
-            return None
+        row = self._fetch_one(
+            "SELECT * FROM event_store WHERE event_id = ?", (event_id,)
+        )
+        return self._row_to_event(row) if row else None
     
     async def read_all(
         self,
@@ -375,35 +372,18 @@ class SQLiteEventStore(EventStore):
         limit: int = 100
     ) -> List[StoredEvent]:
         """Read all events (for projections)."""
-        with self._lock:
-            conn = self._get_connection()
-            cursor = conn.cursor()
-            
-            cursor.execute(
-                """
-                SELECT * FROM event_store 
-                ORDER BY created_at ASC
-                LIMIT ? OFFSET ?
-                """,
-                (limit, from_position)
-            )
-            
-            rows = cursor.fetchall()
-            return [self._row_to_event(row) for row in rows]
+        return self._fetch_events(
+            "SELECT * FROM event_store ORDER BY created_at ASC LIMIT ? OFFSET ?",
+            (limit, from_position)
+        )
     
     async def get_stream_version(self, stream_id: str) -> int:
         """Get the current version of a stream."""
-        with self._lock:
-            conn = self._get_connection()
-            cursor = conn.cursor()
-            
-            cursor.execute(
-                "SELECT current_version FROM stream_metadata WHERE stream_id = ?",
-                (stream_id,)
-            )
-            row = cursor.fetchone()
-            
-            return row[0] if row else 0
+        row = self._fetch_one(
+            "SELECT current_version FROM stream_metadata WHERE stream_id = ?",
+            (stream_id,)
+        )
+        return row[0] if row else 0
     
     async def save_snapshot(
         self,
@@ -412,41 +392,22 @@ class SQLiteEventStore(EventStore):
         snapshot_data: bytes
     ) -> None:
         """Save a snapshot for faster aggregate loading."""
-        with self._lock:
-            conn = self._get_connection()
-            cursor = conn.cursor()
-            
-            created_at = datetime.utcnow().isoformat()
-            
+        with self._cursor(commit=True) as cursor:
             cursor.execute(
-                """
-                INSERT OR REPLACE INTO snapshots 
-                (stream_id, version, snapshot_data, created_at)
-                VALUES (?, ?, ?, ?)
-                """,
-                (stream_id, version, snapshot_data, created_at)
+                "INSERT OR REPLACE INTO snapshots (stream_id, version, snapshot_data, created_at) VALUES (?, ?, ?, ?)",
+                (stream_id, version, snapshot_data, datetime.utcnow().isoformat())
             )
-            
-            conn.commit()
     
     async def get_snapshot(
         self,
         stream_id: str
     ) -> Optional[tuple[int, bytes]]:
         """Get the latest snapshot for a stream."""
-        with self._lock:
-            conn = self._get_connection()
-            cursor = conn.cursor()
-            
-            cursor.execute(
-                "SELECT version, snapshot_data FROM snapshots WHERE stream_id = ?",
-                (stream_id,)
-            )
-            row = cursor.fetchone()
-            
-            if row:
-                return (row[0], row[1])
-            return None
+        row = self._fetch_one(
+            "SELECT version, snapshot_data FROM snapshots WHERE stream_id = ?",
+            (stream_id,)
+        )
+        return (row[0], row[1]) if row else None
     
     async def query_by_event_type(
         self,
@@ -456,28 +417,21 @@ class SQLiteEventStore(EventStore):
         limit: int = 100
     ) -> List[StoredEvent]:
         """Query events by type and time range."""
-        with self._lock:
-            conn = self._get_connection()
-            cursor = conn.cursor()
-            
-            query = "SELECT * FROM event_store WHERE event_type = ?"
-            params = [event_type]
-            
-            if from_time:
-                query += " AND created_at >= ?"
-                params.append(from_time.isoformat())
-            
-            if to_time:
-                query += " AND created_at <= ?"
-                params.append(to_time.isoformat())
-            
-            query += " ORDER BY created_at ASC LIMIT ?"
-            params.append(limit)
-            
-            cursor.execute(query, params)
-            rows = cursor.fetchall()
-            
-            return [self._row_to_event(row) for row in rows]
+        query = "SELECT * FROM event_store WHERE event_type = ?"
+        params: List[Any] = [event_type]
+        
+        if from_time:
+            query += " AND created_at >= ?"
+            params.append(from_time.isoformat())
+        
+        if to_time:
+            query += " AND created_at <= ?"
+            params.append(to_time.isoformat())
+        
+        query += " ORDER BY created_at ASC LIMIT ?"
+        params.append(limit)
+        
+        return self._fetch_events(query, tuple(params))
     
     def _row_to_event(self, row: sqlite3.Row) -> StoredEvent:
         """Convert a database row to a StoredEvent."""
