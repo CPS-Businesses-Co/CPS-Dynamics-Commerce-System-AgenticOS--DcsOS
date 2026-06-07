@@ -61,8 +61,10 @@ class AccountingSwarmServicer(pb2_grpc.AccountingSwarmProtocolServicer):
             )
         except Exception as e:
             context.set_code(grpc.StatusCode.INTERNAL)
-            context.set_details(str(e))
-            return pb2.AckResponse(success=False, message=str(e))
+            context.set_details("Internal processing error")
+            import logging
+            logging.getLogger("gRPC").error("BroadcastFinancialEvent failed: %s", e)
+            return pb2.AckResponse(success=False, message="Internal processing error")
     
     async def SubscribeEvents(self, request: pb2.SubscribeRequest, context: grpc.aio.ServicerContext) -> AsyncIterator[pb2.SovereignFinancialEvent]:
         """Stream events to subscriber."""
